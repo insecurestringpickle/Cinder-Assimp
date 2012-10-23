@@ -815,7 +815,7 @@ void AssimpLoader::draw()
 			}
 			else
 			{
-				gl::color( assimpMeshRef->mMaterial.getDiffuse());
+				//gl::color( assimpMeshRef->mMaterial.getDiffuse());
 			}
 
 			// Culling

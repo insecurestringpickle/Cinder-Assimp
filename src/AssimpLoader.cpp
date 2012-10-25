@@ -678,7 +678,7 @@ void AssimpLoader::updateSkinning()
 				assimpMeshRef->mAnimatedNorm.assign( assimpMeshRef->mAnimatedNorm.size(),
 						aiVector3D( 0, 0, 0 ) );
 			}
-
+			
 			// loop through all vertex weights of all bones
 			for ( unsigned a = 0; a < mesh->mNumBones; ++a )
 			{
@@ -690,6 +690,15 @@ void AssimpLoader::updateSkinning()
 					const aiVertexWeight &weight = bone->mWeights[ b ];
 					size_t vertexId = weight.mVertexId;
 					const aiVector3D& srcPos = mesh->mVertices[vertexId];
+
+          if(mesh->mNumAnimMeshes != 0)
+          {
+            aiAnimMesh* animMesh = mesh->mAnimMeshes[0];
+            const aiVector3D& morphDest = animMesh->mVertices[vertexId];   
+            aiVector3D diff = morphDest - srcPos;
+            float weight = 0.0;
+            assimpMeshRef->mAnimatedPos[vertexId] += weight*diff;
+          }
 
 					assimpMeshRef->mAnimatedPos[vertexId] += weight.mWeight * (posTrafo * srcPos);
 				}
@@ -708,62 +717,11 @@ void AssimpLoader::updateSkinning()
 						assimpMeshRef->mAnimatedNorm[vertexId] += weight.mWeight * (normTrafo * srcNorm);
 					}
 				}
-			}
-			
-			//check mesh for morphs, apply?
-
-      int nMorphChannels =  mesh->mNumAnimMeshes;
-      if (nMorphChannels != 0)
-      {
-        aiAnimMesh* animMesh = mesh->mAnimMeshes[1];
-        int nVerts = mesh->mNumVertices;
-        for (int i = 0; i < nVerts; i++)
-        {
-          const aiVector3D& srcPos = mesh->mVertices[i];
-          const aiVector3D& destPos = animMesh->mVertices[i];
-          aiVector3D diff = destPos - srcPos;
-          float weight = 1.0;
-          assimpMeshRef->mAnimatedPos[i] = diff;
-        }
-      }      
-            
+			}      
     }
 	}
 }
 
-//   vector< AssimpNodeRef >::const_iterator nit = mMeshNodes.begin();
-//   for ( ; nit != mMeshNodes.end(); ++nit )
-//   {
-//     AssimpNodeRef nodeRef = *nit; 
-//   
-//     vector< AssimpMeshRef >::const_iterator meshIt = nodeRef->mMeshes.begin();
-//     for ( ; meshIt != nodeRef->mMeshes.end(); ++meshIt )
-//     {
-//       AssimpMeshRef assimpMeshRef = *meshIt;
-//       // current mesh we are introspecting
-//       const aiMesh *mesh = assimpMeshRef->mAiMesh;
-//       //OK: time to get crazy with le morphs
-//       int nMorphChannels =  mesh->mNumAnimMeshes;
-//       if (nMorphChannels != 0)
-//       {
-//         aiAnimMesh* animMesh = mesh->mAnimMeshes[1];
-//         int nVerts = mesh->mNumVertices;
-//   //         int nmv =0;
-//         for (int i = 0; i < nVerts; i++)
-//         {
-//           const aiVector3D& srcPos = mesh->mVertices[i];
-//           const aiVector3D& destPos = animMesh->mVertices[i];
-//           aiVector3D diff = destPos - srcPos;
-//   //           float dnorm =  sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
-//   //           if (dnorm>1e-10)
-//   //               nmv++;
-//           float weight = 1.0;
-//           assimpMeshRef->mAnimatedPos[i] = diff;
-//         }
-//   //         std::cout<<"nmv="<<nmv<<std::endl;
-//       }
-//     }
-//   }
 void AssimpLoader::updateMeshes()
 {
 	vector< AssimpNodeRef >::iterator it = mMeshNodes.begin();

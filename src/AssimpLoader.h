@@ -145,7 +145,7 @@ class AssimpLoader
 		AssimpNodeRef getAssimpNode( const std::string &name );
 		//! Returns the node called \a name.
 		const AssimpNodeRef getAssimpNode( const std::string &name ) const;
-
+    
 		//! Returns the total number of meshes contained by the node called \a name.
 		size_t getAssimpNodeNumMeshes( const std::string &name );
 		//! Returns the \a n'th cinder::TriMesh contained by the node called \a name.

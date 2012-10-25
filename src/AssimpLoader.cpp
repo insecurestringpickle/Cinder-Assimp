@@ -93,12 +93,15 @@ AssimpLoader::AssimpLoader( fs::path filename ) :
 {
 	// FIXME: aiProcessPreset_TargetRealtime_MaxQuality contains
 	// aiProcess_Debone which is buggy in 3.0.1270
-	unsigned flags = aiProcess_Triangulate |
-					 aiProcess_FlipUVs |
-					 aiProcessPreset_TargetRealtime_Quality |
-					 aiProcess_FindInstances |
-					 aiProcess_ValidateDataStructure |
-					 aiProcess_OptimizeMeshes;
+
+	//TargetRealtime_Quality seems to kill morph channels :| It's flagset that lives in assimp/postprocess.h; 
+	// one of the things it pulls in kills the morphs. Disabling for now.
+ unsigned flags = aiProcess_Triangulate |
+          aiProcess_FlipUVs |
+          //aiProcessPreset_TargetRealtime_Quality; 
+          aiProcess_FindInstances |
+          aiProcess_ValidateDataStructure |
+          aiProcess_OptimizeMeshes;
 
 	mImporterRef = shared_ptr< Assimp::Importer >( new Assimp::Importer() );
 	mImporterRef->SetPropertyInteger( AI_CONFIG_PP_SBP_REMOVE,
@@ -397,6 +400,7 @@ void AssimpLoader::loadAllMeshes()
 	for ( unsigned i = 0; i < mScene->mNumMeshes; ++i )
 	{
 		string name = fromAssimp( mScene->mMeshes[ i ]->mName );
+    //std::cout<<"PUSHING MESH: "<<name<<" TO mMeshes with "<< mScene->mMeshes[ i ]->mNumVertices << " VERTS AND " << mScene->mMeshes[ i ]->mNumAnimMeshes <<" MORPHS"<<std::endl;
 		app::console() << "loading mesh " << i;
 		if ( name != "" )
 			app::console() << " [" << name << "]";
@@ -645,9 +649,8 @@ void AssimpLoader::updateSkinning()
 		for ( ; meshIt != nodeRef->mMeshes.end(); ++meshIt )
 		{
 			AssimpMeshRef assimpMeshRef = *meshIt;
-
-			// current mesh we are introspecting
-			const aiMesh *mesh = assimpMeshRef->mAiMesh;
+      // current mesh we are introspecting
+      const aiMesh *mesh = assimpMeshRef->mAiMesh;
 
 			// calculate bone matrices
 			std::vector< aiMatrix4x4 > boneMatrices( mesh->mNumBones );
@@ -706,10 +709,61 @@ void AssimpLoader::updateSkinning()
 					}
 				}
 			}
-		}
+			
+			//check mesh for morphs, apply?
+
+      int nMorphChannels =  mesh->mNumAnimMeshes;
+      if (nMorphChannels != 0)
+      {
+        aiAnimMesh* animMesh = mesh->mAnimMeshes[1];
+        int nVerts = mesh->mNumVertices;
+        for (int i = 0; i < nVerts; i++)
+        {
+          const aiVector3D& srcPos = mesh->mVertices[i];
+          const aiVector3D& destPos = animMesh->mVertices[i];
+          aiVector3D diff = destPos - srcPos;
+          float weight = 1.0;
+          assimpMeshRef->mAnimatedPos[i] = diff;
+        }
+      }      
+            
+    }
 	}
 }
 
+//   vector< AssimpNodeRef >::const_iterator nit = mMeshNodes.begin();
+//   for ( ; nit != mMeshNodes.end(); ++nit )
+//   {
+//     AssimpNodeRef nodeRef = *nit; 
+//   
+//     vector< AssimpMeshRef >::const_iterator meshIt = nodeRef->mMeshes.begin();
+//     for ( ; meshIt != nodeRef->mMeshes.end(); ++meshIt )
+//     {
+//       AssimpMeshRef assimpMeshRef = *meshIt;
+//       // current mesh we are introspecting
+//       const aiMesh *mesh = assimpMeshRef->mAiMesh;
+//       //OK: time to get crazy with le morphs
+//       int nMorphChannels =  mesh->mNumAnimMeshes;
+//       if (nMorphChannels != 0)
+//       {
+//         aiAnimMesh* animMesh = mesh->mAnimMeshes[1];
+//         int nVerts = mesh->mNumVertices;
+//   //         int nmv =0;
+//         for (int i = 0; i < nVerts; i++)
+//         {
+//           const aiVector3D& srcPos = mesh->mVertices[i];
+//           const aiVector3D& destPos = animMesh->mVertices[i];
+//           aiVector3D diff = destPos - srcPos;
+//   //           float dnorm =  sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
+//   //           if (dnorm>1e-10)
+//   //               nmv++;
+//           float weight = 1.0;
+//           assimpMeshRef->mAnimatedPos[i] = diff;
+//         }
+//   //         std::cout<<"nmv="<<nmv<<std::endl;
+//       }
+//     }
+//   }
 void AssimpLoader::updateMeshes()
 {
 	vector< AssimpNodeRef >::iterator it = mMeshNodes.begin();

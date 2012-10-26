@@ -835,6 +835,7 @@ void AssimpLoader::draw()
 	glPushAttrib( GL_ALL_ATTRIB_BITS );
 	glPushClientAttrib( GL_CLIENT_ALL_ATTRIB_BITS );
 	gl::enable( GL_NORMALIZE );
+  gl::enableAlphaBlending();
 
 	vector< AssimpNodeRef >::const_iterator it = mMeshNodes.begin();
 	for ( ; it != mMeshNodes.end(); ++it )

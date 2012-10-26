@@ -725,7 +725,7 @@ void AssimpLoader::updateSkinning()
               {
                 aiAnimMesh* animMesh = mesh->mAnimMeshes[nm];
                 const aiVector3D& morphDest = animMesh->mVertices[vertexId];   
-                aiVector3D diff = morphDest - srcPos;
+                aiVector3D diff = posTrafo*morphDest - posTrafo*srcPos;
                 assimpMeshRef->mAnimatedPos[vertexId] += weight*diff;
               }
             }

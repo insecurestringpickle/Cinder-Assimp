@@ -47,7 +47,8 @@ class AssimpMesh
 
 		std::vector< aiVector3D > mAnimatedPos;
 		std::vector< aiVector3D > mAnimatedNorm;
-
+    std::vector< float >      mMorphWeights;
+    
 		std::string mName;
 		ci::TriMesh mCachedTriMesh;
 		bool mValidCache;

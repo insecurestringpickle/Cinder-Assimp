@@ -390,6 +390,10 @@ AssimpMeshRef AssimpLoader::convertAiMesh( const aiMesh *mesh )
 		}
 	}
 
+	int nMorphs = mesh->mNumAnimMeshes;
+  for (int nm = 0; nm < nMorphs; nm++)
+    assimpMeshRef->mMorphWeights.push_back(0.0);
+
 	return assimpMeshRef;
 }
 
@@ -407,6 +411,8 @@ void AssimpLoader::loadAllMeshes()
 		app::console() << endl;
 		AssimpMeshRef assimpMeshRef = convertAiMesh( mScene->mMeshes[ i ] );
 		mModelMeshes.push_back( assimpMeshRef );
+    mMeshMap[ name ] = assimpMeshRef;
+    mMeshNames.push_back( name );
 	}
 
 #if 0
@@ -515,6 +521,24 @@ void AssimpLoader::updateAnimation( size_t animationIndex, double currentTime )
 		targetNode->setScale( fromAssimp( presentScaling ) );
 		targetNode->setPosition( fromAssimp( presentPosition ) );
 	}
+}
+
+AssimpMeshRef AssimpLoader::getAssimpMesh( const std::string &name )
+{
+  map< string, AssimpMeshRef >::iterator i = mMeshMap.find( name );
+  if ( i != mMeshMap.end() )
+    return i->second;
+  else
+    return AssimpMeshRef();
+}
+
+const AssimpMeshRef AssimpLoader::getAssimpMesh( const std::string &name ) const
+{
+  map< string, AssimpMeshRef >::const_iterator i = mMeshMap.find( name );
+  if ( i != mMeshMap.end() )
+    return i->second;
+  else
+    return AssimpMeshRef();
 }
 
 AssimpNodeRef AssimpLoader::getAssimpNode( const std::string &name )
@@ -691,13 +715,20 @@ void AssimpLoader::updateSkinning()
 					size_t vertexId = weight.mVertexId;
 					const aiVector3D& srcPos = mesh->mVertices[vertexId];
 
-          if(mesh->mNumAnimMeshes != 0)
+          unsigned nMorphs = assimpMeshRef->mMorphWeights.size();
+          if(nMorphs)
           {
-            aiAnimMesh* animMesh = mesh->mAnimMeshes[0];
-            const aiVector3D& morphDest = animMesh->mVertices[vertexId];   
-            aiVector3D diff = morphDest - srcPos;
-            float weight = 0.0;
-            assimpMeshRef->mAnimatedPos[vertexId] += weight*diff;
+            for (unsigned nm = 0; nm < nMorphs; nm++)
+            {
+              float weight = assimpMeshRef->mMorphWeights[nm];
+              if (weight != 0.0)
+              {
+                aiAnimMesh* animMesh = mesh->mAnimMeshes[nm];
+                const aiVector3D& morphDest = animMesh->mVertices[vertexId];   
+                aiVector3D diff = morphDest - srcPos;
+                assimpMeshRef->mAnimatedPos[vertexId] += weight*diff;
+              }
+            }
           }
 
 					assimpMeshRef->mAnimatedPos[vertexId] += weight.mWeight * (posTrafo * srcPos);
@@ -850,5 +881,21 @@ void AssimpLoader::draw()
 	glPopAttrib();
 }
 
+int AssimpLoader::getAssimpMeshNumMorphChannels (const std::string &name)
+{
+  return mMeshMap[name]->mMorphWeights.size();
+}
+
+float AssimpLoader::getAssimpMeshMorphChannel (const std::string &name, int channel)
+{
+  return mMeshMap[name]->mMorphWeights[channel];
+}
+
+void AssimpLoader::setAssimpMeshMorphChannel (const std::string &name, int channel, float value)
+{
+  mMeshMap[name]->mMorphWeights[channel] = value;
+}
+
+    
 } } // namespace mndl::assimp
 

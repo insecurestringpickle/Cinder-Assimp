@@ -145,7 +145,12 @@ class AssimpLoader
 		AssimpNodeRef getAssimpNode( const std::string &name );
 		//! Returns the node called \a name.
 		const AssimpNodeRef getAssimpNode( const std::string &name ) const;
-    
+
+    //! Returns the mesh called \a name.
+    AssimpMeshRef getAssimpMesh( const std::string &name );
+    //! Returns the mesh called \a name.
+    const AssimpMeshRef getAssimpMesh( const std::string &name ) const;
+
 		//! Returns the total number of meshes contained by the node called \a name.
 		size_t getAssimpNodeNumMeshes( const std::string &name );
 		//! Returns the \a n'th cinder::TriMesh contained by the node called \a name.
@@ -165,6 +170,9 @@ class AssimpLoader
 
 		//! Returns all node names in the model in a std::vector as std::string's.
 		const std::vector< std::string > &getNodeNames() { return mNodeNames; }
+
+		//! Returns all mesh names in the model in a std::vector as std::string's.
+    const std::vector< std::string > &getMeshNames() { return mMeshNames; }
 
 		//! Enables/disables the usage of materials during draw.
 		void enableMaterials( bool enable = true ) { mMaterialsEnabled = enable; }
@@ -210,6 +218,15 @@ class AssimpLoader
 		//! Sets current animation time.
 		void setTime( double t );
 
+    //! Gets the number of morph channels for a given mesh
+    int getAssimpMeshNumMorphChannels (const std::string &name);
+
+    //! Gets the morph channel value for a given mesh and channel
+    float getAssimpMeshMorphChannel (const std::string &name, int channel);
+
+    //! Sets the morph channel value for a given mesh and channel    
+    void setAssimpMeshMorphChannel (const std::string &name, int channel, float value);
+    
 	private:
 		void loadAllMeshes();
 		AssimpNodeRef loadNodes( const aiNode* nd, AssimpNodeRef parentRef = AssimpNodeRef() );
@@ -236,6 +253,9 @@ class AssimpLoader
 
 		std::vector< std::string > mNodeNames;
 		std::map< std::string, AssimpNodeRef > mNodeMap;
+
+    std::vector< std::string > mMeshNames;
+    std::map< std::string, AssimpMeshRef > mMeshMap;
 
 		bool mMaterialsEnabled;
 		bool mTexturesEnabled;

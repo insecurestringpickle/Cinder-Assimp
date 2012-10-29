@@ -842,7 +842,12 @@ void AssimpLoader::draw()
 	glPushAttrib( GL_ALL_ATTRIB_BITS );
 	glPushClientAttrib( GL_CLIENT_ALL_ATTRIB_BITS );
 	gl::enable( GL_NORMALIZE );
+  //fixing alpha blending: https://forum.libcinder.org/topic/alpha-texture-setup
   gl::enableAlphaBlending();
+  glAlphaFunc(GL_GREATER, 0.5);
+  glEnable(GL_ALPHA_TEST);
+
+
 
 	vector< AssimpNodeRef >::const_iterator it = mMeshNodes.begin();
 	for ( ; it != mMeshNodes.end(); ++it )

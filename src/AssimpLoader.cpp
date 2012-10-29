@@ -93,15 +93,23 @@ AssimpLoader::AssimpLoader( fs::path filename ) :
 {
 	// FIXME: aiProcessPreset_TargetRealtime_MaxQuality contains
 	// aiProcess_Debone which is buggy in 3.0.1270
-
-	//TargetRealtime_Quality seems to kill morph channels :| It's flagset that lives in assimp/postprocess.h; 
-	// one of the things it pulls in kills the morphs. Disabling for now.
- unsigned flags = aiProcess_Triangulate |
+	unsigned flags = aiProcess_Triangulate |
           aiProcess_FlipUVs |
-          //aiProcessPreset_TargetRealtime_Quality; 
           aiProcess_FindInstances |
           aiProcess_ValidateDataStructure |
-          aiProcess_OptimizeMeshes;
+          aiProcess_OptimizeMeshes |
+          aiProcess_CalcTangentSpace        |  
+          aiProcess_GenSmoothNormals        |  
+          aiProcess_JoinIdenticalVertices     |  
+          aiProcess_ImproveCacheLocality      |  
+          aiProcess_LimitBoneWeights        |  
+          aiProcess_RemoveRedundantMaterials      |  
+          aiProcess_SplitLargeMeshes        |  
+          aiProcess_Triangulate         |  
+          aiProcess_GenUVCoords                   |  
+          aiProcess_SortByPType                   |  
+          //aiProcess_FindDegenerates               |  
+          aiProcess_FindInvalidData               |  0;
 
 	mImporterRef = shared_ptr< Assimp::Importer >( new Assimp::Importer() );
 	mImporterRef->SetPropertyInteger( AI_CONFIG_PP_SBP_REMOVE,
@@ -404,7 +412,6 @@ void AssimpLoader::loadAllMeshes()
 	for ( unsigned i = 0; i < mScene->mNumMeshes; ++i )
 	{
 		string name = fromAssimp( mScene->mMeshes[ i ]->mName );
-    //std::cout<<"PUSHING MESH: "<<name<<" TO mMeshes with "<< mScene->mMeshes[ i ]->mNumVertices << " VERTS AND " << mScene->mMeshes[ i ]->mNumAnimMeshes <<" MORPHS"<<std::endl;
 		app::console() << "loading mesh " << i;
 		if ( name != "" )
 			app::console() << " [" << name << "]";

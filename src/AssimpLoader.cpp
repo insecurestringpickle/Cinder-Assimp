@@ -124,6 +124,13 @@ AssimpLoader::AssimpLoader( fs::path filename ) :
 
 	loadAllMeshes();
 	mRootNode = loadNodes( mScene->mRootNode );
+  
+  //traverseNodes(mRootNode->getName());
+//   for (int i=0; i<mMeshNames.size(); i++)
+//   {
+//     if (i%2==0)
+//       setAssimpMeshVisibility(mMeshNames[i], 0);
+//   }
 }
 
 void AssimpLoader::calculateDimensions()
@@ -178,6 +185,20 @@ void AssimpLoader::calculateBoundingBoxForNode( const aiNode *nd, aiVector3D *mi
 	*trafo = prev;
 }
 
+void AssimpLoader::traverseNodes (std::string root, std::string rootPath)
+{
+  AssimpNodeRef currentNode = getAssimpNode(root);
+  std::string currentPath = rootPath + "/" + currentNode->getName();
+  Vec3f pos = currentNode->getPosition(); 
+  Vec3f derivedPos = currentNode->getDerivedPosition();
+  std::cout<<currentPath<<" "<<pos<<" "<<derivedPos<<std::endl;
+  
+  for (unsigned int i = 0; i < currentNode->mChildNodeNames.size(); i++)
+  {
+    traverseNodes(currentNode->mChildNodeNames[i], currentPath);
+  }
+}
+
 AssimpNodeRef AssimpLoader::loadNodes( const aiNode *nd, AssimpNodeRef parentRef )
 {
 	AssimpNodeRef nodeRef = AssimpNodeRef( new AssimpNode() );
@@ -218,6 +239,7 @@ AssimpNodeRef AssimpLoader::loadNodes( const aiNode *nd, AssimpNodeRef parentRef
 	{
 		AssimpNodeRef childRef = loadNodes( nd->mChildren[ n ], nodeRef );
 		nodeRef->addChild( childRef );
+    nodeRef->addChildName ( childRef->getName() );
 	}
 	return nodeRef;
 }
@@ -401,6 +423,9 @@ AssimpMeshRef AssimpLoader::convertAiMesh( const aiMesh *mesh )
 	int nMorphs = mesh->mNumAnimMeshes;
   for (int nm = 0; nm < nMorphs; nm++)
     assimpMeshRef->mMorphWeights.push_back(0.0);
+
+  // Assume mesh is visible
+  assimpMeshRef->mVisible = true;
 
 	return assimpMeshRef;
 }
@@ -859,6 +884,9 @@ void AssimpLoader::draw()
 		{
 			AssimpMeshRef assimpMeshRef = *meshIt;
 
+      if (!assimpMeshRef->mVisible)
+          continue;
+
 			// Texture Binding
 			if ( mTexturesEnabled && assimpMeshRef->mTexture )
 			{
@@ -909,6 +937,15 @@ void AssimpLoader::setAssimpMeshMorphChannel (const std::string &name, int chann
   mMeshMap[name]->mMorphWeights[channel] = value;
 }
 
+void AssimpLoader::setAssimpMeshVisibility(const std::string &name, bool visibility)
+{
+  mMeshMap[name]->mVisible = visibility;
+}
+
+bool AssimpLoader::getAssimpMeshVisibility(const std::string &name)
+{
+  return mMeshMap[name]->mVisible;
+}
     
 } } // namespace mndl::assimp
 

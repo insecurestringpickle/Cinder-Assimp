@@ -126,7 +126,7 @@ class Node
 		ci::Quatf mInitialOrientation;
 		/// The scale to use as a base for keyframe animation.
 		ci::Vec3f mInitialScale;
-
+   
 		/// Cached derived transform as a 4x4 matrix
 		mutable ci::Matrix44f mDerivedTransform;
 

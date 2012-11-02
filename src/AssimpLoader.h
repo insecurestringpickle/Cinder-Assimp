@@ -116,6 +116,9 @@ class AssimpNode : public mndl::Node
 {
 	public:
 		std::vector< AssimpMeshRef > mMeshes;
+    std::vector< std::string > mChildNodeNames;
+
+    void addChildName (std::string name) { mChildNodeNames.push_back(name); }
 };
 
 typedef std::shared_ptr< AssimpNode > AssimpNodeRef;
@@ -227,7 +230,14 @@ class AssimpLoader
     //! Sets the morph channel value for a given mesh and channel    
     void setAssimpMeshMorphChannel (const std::string &name, int channel, float value);
     
-	private:
+    //! Sets the visibility of the given mesh
+    void setAssimpMeshVisibility(const std::string &name, bool visibility);
+    
+    //! Gets the visibility of the given mesh
+    bool getAssimpMeshVisibility(const std::string &name);
+    
+    void traverseNodes (std::string root, std::string rootPath="/");
+	protected:
 		void loadAllMeshes();
 		AssimpNodeRef loadNodes( const aiNode* nd, AssimpNodeRef parentRef = AssimpNodeRef() );
 		AssimpMeshRef convertAiMesh( const aiMesh *mesh );

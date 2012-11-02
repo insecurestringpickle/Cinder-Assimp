@@ -370,6 +370,11 @@ struct aiAnimMesh
 	 */
 	unsigned int mNumVertices;
 
+  /**
+   * The name of the per-vertex animation
+   */
+  C_STRUCT aiString mName;
+  
 #ifdef __cplusplus
 
 	aiAnimMesh()

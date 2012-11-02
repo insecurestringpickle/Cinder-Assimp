@@ -52,6 +52,7 @@ class AssimpMesh
 		std::string mName;
 		ci::TriMesh mCachedTriMesh;
 		bool mValidCache;
+    bool mVisible;
 };
 
 } } // namespace mndl::assimp

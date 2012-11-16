@@ -25,6 +25,9 @@
 #include "cinder/CinderMath.h"
 #include "cinder/Utilities.h"
 
+#include "assimp/IOSystem.hpp"
+//#include "assimp/Exporter.hpp"
+
 #include "AssimpLoader.h"
 
 using namespace std;
@@ -98,9 +101,10 @@ AssimpLoader::AssimpLoader( fs::path filename ) :
           aiProcess_FindInstances |
           aiProcess_ValidateDataStructure |
           aiProcess_OptimizeMeshes |
-          aiProcess_CalcTangentSpace        |  
+          aiProcess_CalcTangentSpace        |
           aiProcess_GenSmoothNormals        |  
-          aiProcess_JoinIdenticalVertices     |  
+          // This next step barfs hard on ios with some meshes
+          // aiProcess_JoinIdenticalVertices     |
           aiProcess_ImproveCacheLocality      |  
           aiProcess_LimitBoneWeights        |  
           aiProcess_RemoveRedundantMaterials      |  
@@ -124,13 +128,9 @@ AssimpLoader::AssimpLoader( fs::path filename ) :
 
 	loadAllMeshes();
 	mRootNode = loadNodes( mScene->mRootNode );
-  
-  //traverseNodes(mRootNode->getName());
-//   for (int i=0; i<mMeshNames.size(); i++)
-//   {
-//     if (i%2==0)
-//       setAssimpMeshVisibility(mMeshNames[i], 0);
-//   }
+
+    //Assimp::Exporter* exp = new Assimp::Exporter();
+    //exp->Export(mScene, "collada", "/tmp/foo.dae", flags);
 }
 
 void AssimpLoader::calculateDimensions()
@@ -352,7 +352,9 @@ AssimpMeshRef AssimpLoader::convertAiMesh( const aiMesh *mesh )
 					break;
 
 				case aiTextureMapMode_Clamp:
-					format.setWrapS( GL_CLAMP );
+					//format.setWrapS( GL_CLAMP );
+                    format.setWrapS( GL_CLAMP_TO_EDGE );
+                    //iOS compatibility
 					break;
 
 				case aiTextureMapMode_Decal:
@@ -379,7 +381,9 @@ AssimpMeshRef AssimpLoader::convertAiMesh( const aiMesh *mesh )
 					break;
 
 				case aiTextureMapMode_Clamp:
-					format.setWrapT( GL_CLAMP );
+					//format.setWrapT( GL_CLAMP );
+                    //iOS compatibility
+                    format.setWrapT( GL_CLAMP_TO_EDGE );
 					break;
 
 				case aiTextureMapMode_Decal:
@@ -422,8 +426,11 @@ AssimpMeshRef AssimpLoader::convertAiMesh( const aiMesh *mesh )
 
 	int nMorphs = mesh->mNumAnimMeshes;
   for (int nm = 0; nm < nMorphs; nm++)
+  {
+    aiAnimMesh* aiMesh = mesh->mAnimMeshes[nm];
+    assimpMeshRef->mMorphChannelsNameMap[aiMesh->mName.data] = nm;
     assimpMeshRef->mMorphWeights.push_back(0.0);
-
+  }
   // Assume mesh is visible
   assimpMeshRef->mVisible = true;
 
@@ -548,10 +555,11 @@ void AssimpLoader::updateAnimation( size_t animationIndex, double currentTime )
 			// TODO: (thom) interpolation maybe? This time maybe even logarithmic, not linear
 			presentScaling = channel->mScalingKeys[frame].mValue;
 		}
-
+        /*
 		targetNode->setOrientation( fromAssimp( presentRotation ) );
 		targetNode->setScale( fromAssimp( presentScaling ) );
 		targetNode->setPosition( fromAssimp( presentPosition ) );
+        */
 	}
 }
 
@@ -862,15 +870,42 @@ void AssimpLoader::update()
 	updateMeshes();
 }
 
+namespace
+{
+    
+class GLStateMemory
+{
+public:
+    GLStateMemory(const GLenum& glenum) :
+        mGlEnum(glenum)
+    {
+        mEnabled = glIsEnabled(mGlEnum);
+    }
+    
+    ~GLStateMemory()
+    {
+        if (mEnabled)
+            gl::enable(mGlEnum);
+        else
+            gl::disable(mGlEnum);
+    }
+private:
+    const GLenum mGlEnum;
+    bool mEnabled;
+};
+    
+}// anonymous namespace
 void AssimpLoader::draw()
 {
-	glPushAttrib( GL_ALL_ATTRIB_BITS );
-	glPushClientAttrib( GL_CLIENT_ALL_ATTRIB_BITS );
+    GLStateMemory normalizeState(GL_NORMALIZE);
+    GLStateMemory alphaTestState(GL_ALPHA_TEST);
+    GLStateMemory cullFaceState (GL_CULL_FACE);
+    
 	gl::enable( GL_NORMALIZE );
   //fixing alpha blending: https://forum.libcinder.org/topic/alpha-texture-setup
   gl::enableAlphaBlending();
   glAlphaFunc(GL_GREATER, 0.5);
-  glEnable(GL_ALPHA_TEST);
+    gl::enable(GL_ALPHA_TEST);
 
 
 
@@ -917,24 +952,39 @@ void AssimpLoader::draw()
 			}
 		}
 	}
-
-	glPopClientAttrib();
-	glPopAttrib();
+    
+    gl::disableAlphaBlending();
 }
 
-int AssimpLoader::getAssimpMeshNumMorphChannels (const std::string &name)
+int AssimpLoader::getAssimpMeshNumMorphChannels (const std::string &meshName)
 {
-  return mMeshMap[name]->mMorphWeights.size();
+  return mMeshMap[meshName]->mMorphWeights.size();
 }
 
-float AssimpLoader::getAssimpMeshMorphChannel (const std::string &name, int channel)
+std::vector<std::string> AssimpLoader::getAssimpMeshMorphChannelNames (const std::string &meshName)
 {
-  return mMeshMap[name]->mMorphWeights[channel];
+  std::vector<std::string> list;
+  std::map<std::string, int>::iterator it = mMeshMap[meshName]->mMorphChannelsNameMap.begin();
+  
+  while (it != mMeshMap[meshName]->mMorphChannelsNameMap.end())
+  {
+    list.push_back(it->first);
+    it++;
+  }
+  
+  return list;
 }
 
-void AssimpLoader::setAssimpMeshMorphChannel (const std::string &name, int channel, float value)
+float AssimpLoader::getAssimpMeshMorphChannel (const std::string &meshName, std::string &channelName)
 {
-  mMeshMap[name]->mMorphWeights[channel] = value;
+  int channel = mMeshMap[meshName]->mMorphChannelsNameMap[channelName];
+  return mMeshMap[meshName]->mMorphWeights[channel];
+}
+
+void AssimpLoader::setAssimpMeshMorphChannel (const std::string &meshName, std::string &channelName, float value)
+{
+  int channel = mMeshMap[meshName]->mMorphChannelsNameMap[channelName];
+  mMeshMap[meshName]->mMorphWeights[channel] = value;
 }
 
 void AssimpLoader::setAssimpMeshVisibility(const std::string &name, bool visibility)

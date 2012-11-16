@@ -149,6 +149,8 @@ class AssimpLoader
 		//! Returns the node called \a name.
 		const AssimpNodeRef getAssimpNode( const std::string &name ) const;
 
+    const AssimpNodeRef getAssimpRootNode( ) const { return mRootNode; }
+
     //! Returns the mesh called \a name.
     AssimpMeshRef getAssimpMesh( const std::string &name );
     //! Returns the mesh called \a name.
@@ -222,13 +224,15 @@ class AssimpLoader
 		void setTime( double t );
 
     //! Gets the number of morph channels for a given mesh
-    int getAssimpMeshNumMorphChannels (const std::string &name);
+    int getAssimpMeshNumMorphChannels (const std::string &meshName);
+
+    std::vector<std::string> getAssimpMeshMorphChannelNames (const std::string &meshName);
 
     //! Gets the morph channel value for a given mesh and channel
-    float getAssimpMeshMorphChannel (const std::string &name, int channel);
+    float getAssimpMeshMorphChannel (const std::string &meshName, std::string &channelName);
 
     //! Sets the morph channel value for a given mesh and channel    
-    void setAssimpMeshMorphChannel (const std::string &name, int channel, float value);
+    void setAssimpMeshMorphChannel (const std::string &meshName, std::string &channelName, float value);
     
     //! Sets the visibility of the given mesh
     void setAssimpMeshVisibility(const std::string &name, bool visibility);
@@ -237,6 +241,7 @@ class AssimpLoader
     bool getAssimpMeshVisibility(const std::string &name);
     
     void traverseNodes (std::string root, std::string rootPath="/");
+
 	protected:
 		void loadAllMeshes();
 		AssimpNodeRef loadNodes( const aiNode* nd, AssimpNodeRef parentRef = AssimpNodeRef() );
